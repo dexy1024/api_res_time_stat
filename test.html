@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 耗时统计工具 - 测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .loading { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>API 耗时统计工具 - 性能测试</h1>
+        
+        <div id="status">
+            <div class="status loading">正在检查资源加载状态...</div>
+        </div>
+        
+        <div>
+            <button onclick="testChartJS()">测试 Chart.js</button>
+            <button onclick="testSheetJS()">测试 SheetJS</button>
+            <button onclick="testFullApp()">测试完整应用</button>
+            <button onclick="clearStatus()">清除状态</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function addStatus(message, type = 'loading') {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function testChartJS() {
+            addStatus('正在测试 Chart.js...', 'loading');
+            
+            if (typeof Chart !== 'undefined') {
+                try {
+                    const ctx = document.createElement('canvas').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: { labels: ['Test'], datasets: [{ data: [1] }] }
+                    });
+                    addStatus('✅ Chart.js 工作正常', 'success');
+                } catch (e) {
+                    addStatus('❌ Chart.js 初始化失败: ' + e.message, 'error');
+                }
+            } else {
+                addStatus('❌ Chart.js 未加载', 'error');
+            }
+        }
+        
+        function testSheetJS() {
+            addStatus('正在测试 SheetJS...', 'loading');
+            
+            if (typeof XLSX !== 'undefined') {
+                try {
+                    const wb = XLSX.utils.book_new();
+                    addStatus('✅ SheetJS 工作正常', 'success');
+                } catch (e) {
+                    addStatus('❌ SheetJS 初始化失败: ' + e.message, 'error');
+                }
+            } else {
+                addStatus('❌ SheetJS 未加载', 'error');
+            }
+        }
+        
+        function testFullApp() {
+            addStatus('正在跳转到完整应用...', 'loading');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        }
+        
+        function clearStatus() {
+            document.getElementById('status').innerHTML = '';
+        }
+        
+        // 页面加载时自动检查
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                let status = '';
+                if (typeof Chart !== 'undefined') {
+                    status += '✅ Chart.js 已加载<br>';
+                } else {
+                    status += '❌ Chart.js 未加载<br>';
+                }
+                
+                if (typeof XLSX !== 'undefined') {
+                    status += '✅ SheetJS 已加载<br>';
+                } else {
+                    status += '❌ SheetJS 未加载<br>';
+                }
+                
+                addStatus(status, status.includes('❌') ? 'error' : 'success');
+            }, 2000);
+        });
+    </script>
+    
+    <!-- 加载相同的资源 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>

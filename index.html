@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 耗时统计工具</title>
+    <link rel="stylesheet" href="style.css?v=1.14.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" as="script">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" as="script">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js" as="script">
+    <!-- Chart.js CDN - 使用兼容版本 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" 
+            onerror="loadBackupChart()"></script>
+    <!-- Chart.js datalabels 插件 - 使用更快的 CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js" 
+            onerror="loadBackupDatalabels()"></script>
+    <!-- SheetJS CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- 备用 Chart.js 加载函数 -->
+    <script>
+        function loadBackupChart() {
+            console.log('主 CDN 失败，尝试备用 CDN...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/chart.js@3.9.1/dist/chart.min.js';
+            script.onload = function() {
+                console.log('备用 Chart.js 加载成功');
+            };
+            script.onerror = function() {
+                console.error('所有 Chart.js CDN 都失败了');
+                document.getElementById('loadingOverlay').style.display = 'none';
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadBackupDatalabels() {
+            console.log('datalabels 插件加载失败，使用简化版本...');
+            // 如果插件加载失败，我们将在 JavaScript 中处理
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>API 耗时统计工具</h1>
+            <p>上传 Excel 或 CSV 文件，分析 API 调用耗时分布</p>
+        </header>
+
+        <!-- 文件上传区域 -->
+        <section class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-content">
+                    <div class="upload-icon">📁</div>
+                    <h3>点击或拖拽上传文件</h3>
+                    <p>支持 <span class="file-types">.xlsx</span>、<span class="file-types">.xls</span> 和 <span class="file-types">.csv</span> 格式</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+                </div>
+            </div>
+            <div class="file-info" id="fileInfo" style="display: none;">
+                <div class="file-details">
+                    <span class="file-name" id="fileName"></span>
+                    <span class="file-status" id="fileStatus"></span>
+                </div>
+                <div class="file-actions">
+                    <button class="analyze-btn" id="analyzeBtn">开始分析</button>
+                    <button class="clear-btn" id="clearBtn">清除文件</button>
+                    <button class="stop-btn" id="stopBtn" style="display: none;">停止渲染</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 数据统计摘要 -->
+        <section class="summary-section" id="summarySection" style="display: none;">
+            <h2>数据统计摘要</h2>
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <h3>总调用次数</h3>
+                    <span class="summary-value" id="totalCalls">0</span>
+                </div>
+                <div class="summary-card">
+                    <h3>平均耗时</h3>
+                    <span class="summary-value" id="avgTime">0ms</span>
+                </div>
+                <div class="summary-card">
+                    <h3>最长耗时</h3>
+                    <span class="summary-value" id="maxTime">0ms</span>
+                </div>
+                <div class="summary-card">
+                    <h3>最短耗时</h3>
+                    <span class="summary-value" id="minTime">0ms</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 图表展示区域 -->
+        <section class="charts-section" id="chartsSection" style="display: none;">
+            <h2>耗时分布图表</h2>
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <h3>耗时分布饼图</h3>
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 耗时分布统计表 -->
+        <section class="table-section" id="distributionTableSection" style="display: none;">
+            <h2>耗时分布统计表</h2>
+            <div class="table-container">
+                <table id="distributionTable">
+                    <thead>
+                        <tr>
+                            <th>耗时区间</th>
+                            <th>数量</th>
+                            <th>占比</th>
+                            <th>颜色</th>
+                        </tr>
+                    </thead>
+                    <tbody id="distributionTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 接口详情统计表 -->
+        <section class="table-section" id="tableSection" style="display: none;">
+            <h2>接口详情统计</h2>
+            <div class="table-container">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(0)">接口名称 <span class="sort-icon">↕</span></th>
+                            <th onclick="sortTable(1)">接口中文名 <span class="sort-icon">↕</span></th>
+                            <th onclick="sortTable(2)">数量 <span class="sort-icon">↕</span></th>
+                            <th onclick="sortTable(3)">平均耗时(ms) <span class="sort-icon">↕</span></th>
+                            <th onclick="sortTable(4)">最长耗时(ms) <span class="sort-icon">↕</span></th>
+                            <th onclick="sortTable(5)">最短耗时(ms) <span class="sort-icon">↕</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 5000ms以上接口统计表（置于页面底部） -->
+        <section class="table-section" id="slowTableSection" style="display: none;">
+            <h2>5000ms以上接口统计</h2>
+            <div class="table-container">
+                <table id="slowTable">
+                    <thead>
+                        <tr>
+                            <th>接口名称</th>
+                            <th>接口中文名</th>
+                            <th>数量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slowTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 加载状态 -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p>正在加载资源...</p>
+            </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <span id="errorText"></span>
+            <button onclick="hideError()">×</button>
+        </div>
+    </div>
+
+    <script src="app.js?v=1.14.0"></script>
+</body>
+</html>

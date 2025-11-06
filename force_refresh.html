@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>强制刷新 - API 耗时统计工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .refresh-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #ff6666;
+            transform: translateY(-2px);
+        }
+        .info {
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        .color-preview {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 5px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="refresh-box">
+        <h1>🔄 强制刷新页面</h1>
+        <div class="info">
+            <p>API 耗时统计工具 v1.10.1</p>
+            <p>5000ms以上区间已调整为红色</p>
+            <div style="margin: 20px 0;">
+                <span>新配色预览：</span>
+                <span class="color-preview" style="background: #667eea;"></span>
+                <span class="color-preview" style="background: #764ba2;"></span>
+                <span class="color-preview" style="background: #f093fb;"></span>
+                <span class="color-preview" style="background: #f5576c;"></span>
+                <span class="color-preview" style="background: #4facfe;"></span>
+                <span class="color-preview" style="background: #00f2fe;"></span>
+                <span class="color-preview" style="background: #43e97b;"></span>
+                <span class="color-preview" style="background: #ff4444;"></span>
+                <span style="color: #ff4444; font-weight: bold;">← 红色</span>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="forceRefresh()">🚀 强制刷新主页面</button>
+        <button class="btn" onclick="clearCache()">🗑️ 清除缓存</button>
+        
+        <div class="info">
+            <p><strong>手动刷新方法：</strong></p>
+            <p>Mac: Cmd + Shift + R</p>
+            <p>Windows: Ctrl + F5</p>
+        </div>
+    </div>
+
+    <script>
+        function forceRefresh() {
+            // 清除所有缓存
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) {
+                        caches.delete(name);
+                    });
+                });
+            }
+            
+            // 强制刷新主页面
+            window.location.href = 'index.html?t=' + Date.now();
+        }
+        
+        function clearCache() {
+            // 清除localStorage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // 清除IndexedDB
+            if ('indexedDB' in window) {
+                indexedDB.databases().then(databases => {
+                    databases.forEach(db => {
+                        indexedDB.deleteDatabase(db.name);
+                    });
+                });
+            }
+            
+            alert('缓存已清除！请刷新页面。');
+        }
+        
+        // 自动显示当前时间戳
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('强制刷新页面已加载 - 时间戳:', Date.now());
+        });
+    </script>
+</body>
+</html>
