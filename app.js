@@ -244,6 +244,7 @@ function startAnalysis() {
             renderCharts();
             renderTable();
             renderSlowApisTable();
+            renderApiDistributionTable();
             
             // 显示所有结果区域
             document.getElementById('summarySection').style.display = 'block';
@@ -384,9 +385,15 @@ function processExcelData(jsonData) {
                 const timeValue = parseTimeValue(row[1]);
                 
                 if (apiName && timeValue !== null && timeValue >= 0) {
+                    // 解析AI识别请求量和返回量（第3列和第4列，如果存在）
+                    const aiRequestCount = row[2] ? parseInt(row[2]) || 0 : 0;
+                    const aiResponseCount = row[3] ? parseInt(row[3]) || 0 : 0;
+                    
                     rawData.push({
                         apiName: apiName,
-                        time: timeValue
+                        time: timeValue,
+                        aiRequestCount: aiRequestCount,
+                        aiResponseCount: aiResponseCount
                     });
                 }
             }
@@ -506,6 +513,36 @@ function calculateTimeDistribution() {
     });
     
     return distribution;
+}
+
+// 计算每个接口在各个耗时区间的分布
+function calculateApiTimeDistribution() {
+    const apiDistribution = {};
+    
+    // 初始化每个接口的区间计数
+    Object.keys(processedData).forEach(apiName => {
+        apiDistribution[apiName] = {};
+        timeRanges.forEach(range => {
+            apiDistribution[apiName][range.label] = 0;
+        });
+    });
+    
+    // 统计每个接口在各个区间的数据量
+    rawData.forEach(item => {
+        const apiName = item.apiName;
+        const time = item.time;
+        
+        if (apiDistribution[apiName]) {
+            for (const range of timeRanges) {
+                if (time >= range.min && time < range.max) {
+                    apiDistribution[apiName][range.label]++;
+                    break;
+                }
+            }
+        }
+    });
+    
+    return apiDistribution;
 }
 
 
@@ -704,6 +741,160 @@ function renderSlowApisTable() {
     tableSection.style.display = 'block';
 }
 
+// 渲染接口耗时分布行列转换表
+function renderApiDistributionTable() {
+    const tableBody = document.getElementById('apiDistributionTableBody');
+    const tableSection = document.getElementById('apiDistributionTableSection');
+    
+    if (!tableBody || !tableSection) {
+        console.error('接口耗时分布表格元素未找到');
+        return;
+    }
+    
+    tableBody.innerHTML = '';
+    
+    // 计算总体耗时分布
+    const distribution = calculateTimeDistribution();
+    
+    // 计算总数（总调用次数）
+    const total = Object.values(distribution).reduce((sum, count) => sum + count, 0);
+    
+    // AI识别请求量和返回量都使用总调用次数
+    const totalAiRequestCount = total;
+    const totalAiResponseCount = total;
+    
+    if (total === 0) {
+        tableSection.style.display = 'none';
+        return;
+    }
+    
+    // 第一行：总量
+    const countRow = document.createElement('tr');
+    let countCells = `<td><strong>总量</strong></td><td><strong>${totalAiRequestCount}</strong></td><td><strong>${totalAiResponseCount}</strong></td>`;
+    
+    timeRanges.forEach((range, index) => {
+        const count = distribution[range.label] || 0;
+        let cellStyle = '';
+        if (count > 0) {
+            // 将十六进制颜色转换为 rgba，添加透明度
+            const color = chartColors[index];
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            cellStyle = `style="background-color: rgba(${r}, ${g}, ${b}, 0.1);"`;
+        }
+        countCells += `<td ${cellStyle}><strong>${count}</strong></td>`;
+    });
+    
+    countRow.innerHTML = countCells;
+    tableBody.appendChild(countRow);
+    
+    // 第二行：占比
+    const percentageRow = document.createElement('tr');
+    let percentageCells = '<td><strong>占比</strong></td><td></td><td></td>';
+    
+    timeRanges.forEach((range, index) => {
+        const count = distribution[range.label] || 0;
+        const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+        let cellStyle = '';
+        if (count > 0) {
+            // 将十六进制颜色转换为 rgba，添加透明度
+            const color = chartColors[index];
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            cellStyle = `style="background-color: rgba(${r}, ${g}, ${b}, 0.1);"`;
+        }
+        percentageCells += `<td ${cellStyle}><strong>${percentage}%</strong></td>`;
+    });
+    
+    percentageRow.innerHTML = percentageCells;
+    tableBody.appendChild(percentageRow);
+    
+    tableSection.style.display = 'block';
+    console.log('接口耗时分布表格渲染完成');
+}
+
+// 下载耗时分布统计表
+function downloadDistributionTable() {
+    try {
+        // 计算总体耗时分布
+        const distribution = calculateTimeDistribution();
+        const total = Object.values(distribution).reduce((sum, count) => sum + count, 0);
+        
+        if (total === 0) {
+            showError('没有可下载的数据');
+            return;
+        }
+        
+        // 准备表格数据
+        const tableData = [];
+        
+        // 表头
+        const headers = ['统计项', 'AI识别请求量', 'AI识别返回量', 
+                        '0-1000ms', '1000-1500ms', '1500-2000ms', 
+                        '2000-2500ms', '2500-3000ms', '3000-3500ms', 
+                        '3500-5000ms', '5000ms以上'];
+        tableData.push(headers);
+        
+        // 第一行：总量
+        const countRow = ['总量', total, total];
+        timeRanges.forEach(range => {
+            countRow.push(distribution[range.label] || 0);
+        });
+        tableData.push(countRow);
+        
+        // 第二行：占比
+        const percentageRow = ['占比', '', ''];
+        timeRanges.forEach(range => {
+            const count = distribution[range.label] || 0;
+            const percentage = total > 0 ? ((count / total) * 100).toFixed(1) + '%' : '0.0%';
+            percentageRow.push(percentage);
+        });
+        tableData.push(percentageRow);
+        
+        // 创建工作簿
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(tableData);
+        
+        // 设置列宽
+        const colWidths = [
+            { wch: 12 }, // 统计项
+            { wch: 15 }, // AI识别请求量
+            { wch: 15 }, // AI识别返回量
+            { wch: 12 }, // 0-1000ms
+            { wch: 12 }, // 1000-1500ms
+            { wch: 12 }, // 1500-2000ms
+            { wch: 12 }, // 2000-2500ms
+            { wch: 12 }, // 2500-3000ms
+            { wch: 12 }, // 3000-3500ms
+            { wch: 12 }, // 3500-5000ms
+            { wch: 12 }  // 5000ms以上
+        ];
+        ws['!cols'] = colWidths;
+        
+        // 添加工作表到工作簿
+        XLSX.utils.book_append_sheet(wb, ws, '耗时分布统计');
+        
+        // 生成文件名（包含时间戳）
+        const now = new Date();
+        const timestamp = now.getFullYear() + 
+                         String(now.getMonth() + 1).padStart(2, '0') + 
+                         String(now.getDate()).padStart(2, '0') + '_' +
+                         String(now.getHours()).padStart(2, '0') + 
+                         String(now.getMinutes()).padStart(2, '0');
+        const fileName = `耗时分布统计表_${timestamp}.xlsx`;
+        
+        // 下载文件
+        XLSX.writeFile(wb, fileName);
+        
+        console.log('表格下载成功:', fileName);
+    } catch (error) {
+        console.error('下载表格时出错:', error);
+        showError('下载表格失败，请重试');
+    }
+}
+
 // 表格排序功能
 let sortDirection = {};
 
@@ -752,6 +943,8 @@ function clearFile() {
     document.getElementById('tableSection').style.display = 'none';
     const slowTableSection = document.getElementById('slowTableSection');
     if (slowTableSection) slowTableSection.style.display = 'none';
+    const apiDistributionTableSection = document.getElementById('apiDistributionTableSection');
+    if (apiDistributionTableSection) apiDistributionTableSection.style.display = 'none';
     
     // 重置上传区域
     uploadArea.style.display = 'block';

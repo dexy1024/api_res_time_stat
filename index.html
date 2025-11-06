@@ -146,6 +146,37 @@
             </div>
         </section>
 
+        <!-- 接口耗时分布行列转换表 -->
+        <section class="table-section" id="apiDistributionTableSection" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">耗时分布统计表（行列转换）</h2>
+                <button class="download-btn" id="downloadDistributionTableBtn" onclick="downloadDistributionTable()">
+                    📥 下载表格
+                </button>
+            </div>
+            <div class="table-container">
+                <table id="apiDistributionTable">
+                    <thead>
+                        <tr>
+                            <th>统计项</th>
+                            <th>AI识别请求量</th>
+                            <th>AI识别返回量</th>
+                            <th>0-1000ms</th>
+                            <th>1000-1500ms</th>
+                            <th>1500-2000ms</th>
+                            <th>2000-2500ms</th>
+                            <th>2500-3000ms</th>
+                            <th>3000-3500ms</th>
+                            <th>3500-5000ms</th>
+                            <th>5000ms以上</th>
+                        </tr>
+                    </thead>
+                    <tbody id="apiDistributionTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <!-- 5000ms以上接口统计表（置于页面底部） -->
         <section class="table-section" id="slowTableSection" style="display: none;">
             <h2>5000ms以上接口统计</h2>
