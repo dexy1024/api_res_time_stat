@@ -1,8 +1,12 @@
 import axios from 'axios'
 import type { CreateVideoPayload, ProviderStatus, VideoTask } from '@/types'
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
+
+export const isStaticDemoMode = !import.meta.env.VITE_API_BASE_URL && import.meta.env.PROD
+
 const client = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl,
   timeout: 60_000,
 })
 

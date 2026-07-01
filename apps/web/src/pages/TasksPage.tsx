@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Card, Table, Tag, Typography } from 'antd'
-import { fetchVideoTasks } from '@/services/api'
+import { fetchVideoTasks, isStaticDemoMode } from '@/services/api'
 import type { TaskStatus, VideoProvider } from '@/types'
 
 const statusColor: Record<TaskStatus, string> = {
@@ -19,7 +19,8 @@ export function TasksPage() {
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['video-tasks'],
     queryFn: fetchVideoTasks,
-    refetchInterval: 5000,
+    enabled: !isStaticDemoMode,
+    refetchInterval: isStaticDemoMode ? false : 5000,
   })
 
   return (
@@ -35,6 +36,7 @@ export function TasksPage() {
           loading={isLoading}
           dataSource={tasks}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: 'max-content' }}
           columns={[
             { title: '任务名称', dataIndex: 'title' },
             {

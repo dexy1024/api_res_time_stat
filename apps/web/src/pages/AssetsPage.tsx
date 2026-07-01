@@ -60,6 +60,7 @@ export function AssetsPage() {
           rowKey="id"
           dataSource={assets}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: 'max-content' }}
           columns={[
             { title: '文件名', dataIndex: 'name' },
             {

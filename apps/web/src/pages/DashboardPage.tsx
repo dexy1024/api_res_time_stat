@@ -1,6 +1,6 @@
 import { Alert, Card, Col, Row, Statistic, Typography } from 'antd'
 import { useQuery } from '@tanstack/react-query'
-import { fetchProviderStatus, fetchVideoTasks } from '@/services/api'
+import { fetchProviderStatus, fetchVideoTasks, isStaticDemoMode } from '@/services/api'
 import { useAppStore } from '@/stores/useAppStore'
 import { useAssetStore } from '@/stores/useAssetStore'
 import { useProviderStore } from '@/stores/useProviderStore'
@@ -13,12 +13,22 @@ export function DashboardPage() {
   const { data: tasks = [] } = useQuery({
     queryKey: ['video-tasks'],
     queryFn: fetchVideoTasks,
+    enabled: !isStaticDemoMode,
   })
 
   const { data: providers = [] } = useQuery({
     queryKey: ['provider-status'],
     queryFn: fetchProviderStatus,
+    enabled: !isStaticDemoMode,
   })
+
+  const displayProviders =
+    providers.length > 0
+      ? providers
+      : [
+          { provider: 'aliyun' as const, label: '阿里云（通义万相）', configured: false, enabled: true },
+          { provider: 'jimeng' as const, label: '字节跳动（即梦 AI）', configured: false, enabled: true },
+        ]
 
   const completedCount = tasks.filter((item) => item.status === 'completed').length
   const processingCount = tasks.filter((item) => item.status === 'processing').length
@@ -65,7 +75,7 @@ export function DashboardPage() {
 
       <Card title="服务连接状态">
         <Row gutter={[16, 16]}>
-          {providers.map((item) => (
+          {displayProviders.map((item) => (
             <Col key={item.provider} xs={24} md={12}>
               <Card size="small">
                 <Typography.Text strong>{item.label}</Typography.Text>

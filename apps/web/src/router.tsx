@@ -6,6 +6,8 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { TasksPage } from '@/pages/TasksPage'
 import { VideoPage } from '@/pages/VideoPage'
 
+const basepath = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
+
 const rootRoute = createRootRoute({
   component: AppLayout,
 })
@@ -48,7 +50,10 @@ const routeTree = rootRoute.addChildren([
   settingsRoute,
 ])
 
-export const router = createRouter({ routeTree })
+export const router = createRouter({
+  routeTree,
+  basepath: basepath === '/' ? undefined : basepath,
+})
 
 declare module '@tanstack/react-router' {
   interface Register {
